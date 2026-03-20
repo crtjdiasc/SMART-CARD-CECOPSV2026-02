@@ -277,9 +277,7 @@ LIMPEZA TOTAL REAL
 </main>
 
 <script>
-   // 1. Atualize as constantes no topo do seu script
-const SUPABASE_URL = "https://ptcglislxatfwojboxak.supabase.co";
-const SUPABASE_KEY = "sb_publishable_xs9SWHiFcUJCPzBppsJaLg_-hfgy-nJ";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxpvyfuDMihL2g7w3nPEcp1pwbMNgpOMl9uYTxFzeL8RWUMqp3_bwZZNCFPeM7tke3dvg/exec";
 
     let db = {
     cartoes: [],
@@ -580,60 +578,46 @@ function limparRegistrosComErro() {
     }
 
     async function enviarCartaoPlanilha() {
-    const cartao = {
-        num: document.getElementById('cad_cartao_num').value,
-        veiculo: document.getElementById('cad_cartao_veic').value,
-        pontos: [...pontosTemporarios]
-    };
+        const cartao = {
+            num: document.getElementById('cad_cartao_num').value,
+            veiculo: document.getElementById('cad_cartao_veic').value,
+            pontos: [...pontosTemporarios]
+        };
+        db.cartoes.push(cartao);
 
-    // Salva no banco local
-    db.cartoes.push(cartao);
-    salvarLocal();
-    popularTodosSelects();
-
-    // ENVIO PARA O SUPABASE
-    // [Data, "CARTÃO", Número, Veículo, Pontos_Separados_por_Pipe]
-    await apiPost("Cadastros", [
-        new Date().toLocaleString(), 
-        "CARTÃO", 
-        cartao.num, 
-        cartao.veiculo, 
-        cartao.pontos.join('|')
-    ]);
-
-    alert(`Cartão ${cartao.num} salvo no sistema!`);
-    
-    // Limpeza da tela
-    pontosTemporarios = [];
-    document.getElementById('cad_cartao_num').value = "";
-    document.getElementById('listaPontosPreview').innerHTML = "Aguardando pontos (0/25)...";
-    document.getElementById('btnSalvarCartao').disabled = true;
-}
+        salvarLocal();
+        popularTodosSelects();
+        alert(`Cartão ${cartao.num} salvos!`);
+        pontosTemporarios = [];
+        document.getElementById('cad_cartao_num').value = "";
+        document.getElementById('listaPontosPreview').innerHTML = "Aguardando pontos (0/25)...";
+        document.getElementById('btnSalvarCartao').disabled = true;
+        apiPost("Cadastros", [new Date().toLocaleString(), "CARTÃO", cartao.num, cartao.veiculo, cartao.pontos.join('|')]);
+    }
 
     async function enviarAuxiliar() {
-    const nome = document.getElementById('cad_aux_nome').value;
-    const tipo = document.getElementById('cad_aux_tipo').value;
-    if(!nome) return;
+        const nome = document.getElementById('cad_aux_nome').value;
+        const tipo = document.getElementById('cad_aux_tipo').value;
+        if(!nome) return;
+       if(tipo === "Operador") db.operadores.push(nome);
 
-    // Salva no banco local (para uso imediato na tela)
-    if(tipo === "Operador") db.operadores.push(nome);
-    else if(tipo === "Rondante") db.rondantes.push(nome);
-    else if(tipo === "Supervisor") db.supervisores.push(nome);
-    else if(tipo === "Placa") db.placas.push(nome);
-    else if(tipo === "Motivo") db.motivos.push(nome);
-    else db.locais.push(nome);
+else if(tipo === "Rondante") db.rondantes.push(nome);
 
-    ordenarListas();
-    salvarLocal();
-    popularTodosSelects();
+else if(tipo === "Supervisor") db.supervisores.push(nome);
 
-    // ENVIO PARA O SUPABASE
-    // [Data, Tipo, Nome]
-    await apiPost("Cadastros", [new Date().toLocaleString(), tipo, nome]);
+else if(tipo === "Placa") db.placas.push(nome);
 
-    alert(`${tipo} cadastrado com sucesso no Supabase!`);
-    document.getElementById('cad_aux_nome').value = "";
-}
+else if(tipo === "Motivo") db.motivos.push(nome);
+
+else db.locais.push(nome);
+        ordenarListas();
+        salvarLocal();
+        popularTodosSelects();
+        alert(`${tipo} cadastrado!`);
+        document.getElementById('cad_aux_nome').value = "";
+        apiPost("Cadastros", [new Date().toLocaleString(), tipo, nome]);
+    }
+
     function renderizarAbasVeiculos() {
         const veics = [{id: 'V01', n: 'VICTOR 01'}, {id: 'V02', n: 'VICTOR 02'}, {id: 'V03', n: 'VICTOR 03'}, {id: 'A02', n: 'ALFA 02'}];
         const container = document.getElementById('container-veiculos');
@@ -787,44 +771,39 @@ salvarLocal();
     });
 }
 
-   function iniciarSessaoRonda(vId) {
-
+  function iniciarSessaoRonda(vId) {
     const num = document.getElementById(`sel_cartao_${vId}`).value;
     if(!num) return;
 
-    const veiculosMap = {
-        V01: "VICTOR 01",
-        V02: "VICTOR 02",
-        V03: "VICTOR 03",
-        A02: "ALFA 02"
-    };
-
+    const veiculosMap = { V01: "VICTOR 01", V02: "VICTOR 02", V03: "VICTOR 03", A02: "ALFA 02" };
     const nomeVeiculo = veiculosMap[vId];
 
-    const cartao = db.cartoes.find(c =>
-        c.num === num && c.veiculo === nomeVeiculo
-    );
+    const cartao = db.cartoes.find(c => c.num === num && c.veiculo === nomeVeiculo);
 
     if(!cartao) {
         alert("⚠️ Cartão não encontrado para este veículo.");
         return;
     }
 
+    // Agora capturamos os valores dos selects no momento do início
     rondaEmCurso[vId] = {
-    num: num,
-    dataInicio: new Date().toLocaleString(), // 🔥 IMPORTANTE
-    pontosOriginais: [...cartao.pontos],
-    index: 0,
-    respostas: [],
-    op: "",
-    ron: "",
-    obs: ""
-};
-    salvarEstadoTempoReal(vId);
+        num: num,
+        dataInicio: new Date().toLocaleString(),
+        pontosOriginais: [...cartao.pontos],
+        index: 0,
+        respostas: [],
+        // CAPTURA DOS DADOS QUE FALTAVAM:
+        op: document.getElementById(`sel_op_${vId}`).value,
+        ron: document.getElementById(`sel_ron_${vId}`).value,
+        sup: document.getElementById(`sel_sup_${vId}`).value,
+        placa: document.getElementById(`sel_placa_${vId}`).value,
+        obs: document.getElementById(`obs_${vId}`).value
+    };
+    
+    salvarEstadoTempoReal(vId); // Salva no LocalStorage
     atualizarInterfaceRonda(vId);
     document.getElementById(`btn_fin_${vId}`).disabled = true;
 }
-   
     function atualizarInterfaceRonda(vId) {
         let r = rondaEmCurso[vId];
 
@@ -841,40 +820,43 @@ document.getElementById(`ponto_anterior_${vId}`).innerText =
         document.getElementById(`h_ini_${vId}`).innerText = agora.toLocaleTimeString('pt-BR');
     }
 
-   async function finalizarRonda(vId) {
+   function finalizarRonda(vId) {
     const r = rondaEmCurso[vId];
-    const score = ((r.respostas.filter(x => x.status === "Conforme").length / 25) * 100).toFixed(1) + "%";
-   
-    // INCLUINDO O DESVIO NA STRING DE DETALHES
-    const detalhesFormatados = r.respostas.map(x =>
-        `${x.ponto}: [${x.hIni}-${x.hFim}] | ${x.status} | Desvio: ${x.desvio}`
-    ).join(' || ');
+    if (!r) return;
 
-    const valores = [
-new Date().toLocaleString(),
-vId,
-r.num,
-r.placa,
-r.op,
-r.ron,
-r.sup,
-score,
-detalhesFormatados
-];
+    // Criamos um array de linhas, onde cada linha é um ponto da ronda
+    const todasAsLinhas = r.respostas.map((res, i) => {
+        return [
+            new Date().toLocaleString(),  // Data/Hora do Registro
+            r.num,                        // Cartão
+            r.op,                         // Operador
+            r.ron,                        // Rondante
+            r.placa || "N/A",             // Placa (Veículo)
+            res.ponto,                    // PONTO (Ex: Ponto 01)
+            res.hora_inicio,              // Início
+            res.hora_fim,                 // Final
+            res.status,                   // Status (SIM/NÃO)
+            res.motivo || "N/A",          // Motivo
+            res.desvio || "N/A",          // Desvio
+            r.obs || "Sem obs"            // Observações Gerais
+        ];
+    });
 
-    db.finalizados.push(valores);
+    // Envia cada ponto individualmente para a planilha
+    todasAsLinhas.forEach(linha => {
+        apiPost("CartoesFinalizados", linha);
+    });
+
+    // Adiciona ao histórico local (apenas a primeira linha para não poluir a tela)
+    db.finalizados.unshift(todasAsLinhas[0]); 
     salvarLocal();
-   
-    delete rondaEmCurso[vId];
-    localStorage.setItem('ronda_em_curso', JSON.stringify(rondaEmCurso));
-   
-    renderizarHistorico();
-   
-    // Tenta enviar para o Google Sheets
-    apiPost("CartoesFinalizados", valores);
 
-    alert("Ronda Finalizada com Sucesso!");
-    location.reload(); // Recarrega para limpar os campos da tela
+    alert("✅ Todos os 25 pontos foram enviados para o banco de dados!");
+
+    // Limpeza de sistema
+    delete rondaEmCurso[vId];
+    localStorage.removeItem('ronda_em_curso');
+    location.reload();
 }
 
     async function apiPost(aba, valores) {
@@ -1138,51 +1120,44 @@ async function salvarNaPlanilha(aba, valores) {
     }
 }
 
-function registrarAcao(vId, isOk) {
+function registrarAcao(vId, conforme) {
     let r = rondaEmCurso[vId];
-    if(!r || r.index >= 25) return;
-   
-    const hFim = document.getElementById(`h_fim_${vId}`).value;
-    if(!hFim) { alert("⚠️ Por favor, registre a HORA FINAL do ponto."); return; }
+    if (!r) return;
 
-    const desvio = document.getElementById(`sel_loc_ponto_${vId}`).value;
-const motivo = document.getElementById(`sel_motivo_${vId}`).value || "Sem Motivo";
-    const hIni = document.getElementById(`h_ini_${vId}`).innerText;
+    // Captura os valores dos campos no momento do clique
+    const horaFinalPonto = document.getElementById(`h_fim_${vId}`).value;
+    const placaVeiculo = document.getElementById(`sel_placa_${vId}`).value;
+    const motivoAcao = document.getElementById(`sel_motivo_${vId}`).value;
+    const desvioLocal = document.getElementById(`sel_loc_ponto_${vId}`).value;
 
-    const respostaAtual = {
+    if (!horaFinalPonto) {
+        alert("⚠️ Por favor, preencha a HORA FINAL antes de registrar.");
+        return;
+    }
+
+    // Adiciona ao histórico da ronda atual
+    r.respostas.push({
         ponto: r.pontosOriginais[r.index],
-        status: isOk ? "Conforme" : "Não Conforme",
-        desvio: desvio,
-        hIni: hIni,
-        hFim: hFim
-    };
+        status: conforme ? "SIM" : "NÃO",
+        hora_inicio: document.getElementById(`h_ini_${vId}`).innerText,
+        hora_fim: horaFinalPonto,
+        placa: placaVeiculo, // Adicionado aqui
+        motivo: motivoAcao,
+        desvio: desvioLocal
+    });
 
-    r.respostas.push(respostaAtual);
     r.index++;
-
-    salvarRondaEmAndamento(vId);
-    salvarEstadoTempoReal(vId);
-
-    // 🔹 Enviar ponto atual para planilha
-    salvarNaPlanilha("RondasEmAndamento", [
-        new Date().toLocaleString(),
-        vId,
-        r.num,
-        r.index,
-        r.op,
-        r.ron,
-        r.obs,
-        `${respostaAtual.ponto} | ${respostaAtual.status} | Motivo: ${motivo} | Desvio: ${desvio}`
-    ]);
-
-    if(r.index < 25) {
+    
+    if (r.index < 25) {
+        salvarEstadoTempoReal(vId);
         atualizarInterfaceRonda(vId);
+        document.getElementById(`h_fim_${vId}`).value = ""; // Limpa para o próximo ponto
     } else {
         document.getElementById(`nome_ponto_${vId}`).innerText = "RONDA CONCLUÍDA";
         document.getElementById(`bar_${vId}`).style.width = "100%";
         document.getElementById(`btn_fin_${vId}`).disabled = false;
+        salvarEstadoTempoReal(vId);
     }
-    document.getElementById(`h_fim_${vId}`).value = "";
 }
 async function removerRondaEmAndamento(vId) {
 
@@ -1269,75 +1244,46 @@ function renderizarProgramacao() {
 }
 
 
-async function apiPost(tabela, arrayDados) {
-    const SUPABASE_URL = "https://ptcglislxatfwojboxak.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_xs9SWHiFcUJCPzBppsJaLg_-hfgy-nJ";
+function finalizarRonda(vId) {
+    const r = rondaEmCurso[vId];
+    
+    // Criamos um resumo dos horários finais de todos os pontos
+    const todosHorariosFinais = r.respostas.map(res => res.hora_fim).join(' | ');
+    
+    // Pegamos a placa (ou do objeto ou do select diretamente)
+    const placaFinal = r.placa || document.getElementById(`sel_placa_${vId}`).value;
 
-    // Mapeia o array da planilha para as colunas do banco
-    let payload = {};
-    if (tabela === "CartoesFinalizados") {
-        payload = {
-            "data_hora": arrayDados[0],
-            "veiculo": arrayDados[1],
-            "cartao": arrayDados[2],
-            "operador": arrayDados[3],
-            "rondante": arrayDados[4],
-            "score": arrayDados[5],
-            "status_pontos": arrayDados[6],
-            "observacoes": arrayDados[7] || ""
-        };
-    } else {
-        // Para Cadastros e outros
-        payload = { "data": arrayDados[0], "tipo": arrayDados[1], "nome": arrayDados[2] };
-    }
+    // MONTAGEM DA LINHA PARA A PLANILHA (Ajuste a ordem conforme suas colunas no Sheets)
+    const dadosParaPlanilha = [
+        new Date().toLocaleString(),       // Coluna A: Data/Hora
+        r.num,                             // Coluna B: Cartão
+        r.op,                              // Coluna C: Operador
+        r.ron,                             // Coluna D: Vigilante/Rondante
+        placaFinal,                        // Coluna E: PLACA (Agora incluída!)
+        r.respostas.filter(x => x.status === "SIM").length + "/25", // Coluna F: Score
+        todosHorariosFinais,               // Coluna G: TODOS OS HORÁRIOS FINAIS
+        r.obs                              // Coluna H: Observações
+    ];
 
-    try {
-        await fetch(`${SUPABASE_URL}/rest/v1/${tabela}`, {
-            method: "POST",
-            headers: {
-                "apikey": SUPABASE_KEY,
-                "Authorization": `Bearer ${SUPABASE_KEY}`,
-                "Content-Type": "application/json",
-                "Prefer": "return=minimal"
-            },
-            body: JSON.stringify(payload)
-        });
-        console.log("💾 Salvo no Supabase com sucesso!");
-    } catch (e) {
-        console.error("❌ Erro ao salvar:", e);
-    }
+    // Envia para o Google Apps Script
+    apiPost("CartoesFinalizados", dadosParaPlanilha);
+    
+    // Salva no banco de dados local para o histórico da tela
+    db.finalizados.unshift(dadosParaPlanilha);
+    salvarLocal();
+    
+    alert("✅ Ronda enviada com sucesso!");
+    
+    // Limpeza
+    delete rondaEmCurso[vId];
+    localStorage.removeItem('ronda_em_curso');
+    location.reload();
 }
-function sincronizarSupabaseParaPlanilha() {
-  const url = "https://ptcglislxatfwojboxak.supabase.co/rest/v1/CartoesFinalizados?select=*";
-  const options = {
-    "headers": {
-      "apikey": "sb_publishable_xs9SWHiFcUJCPzBppsJaLg_-hfgy-nJ",
-      "Authorization": "Bearer sb_publishable_xs9SWHiFcUJCPzBppsJaLg_-hfgy-nJ"
-    }
-  };
-  
-  const res = UrlFetchApp.fetch(url, options);
-  const dados = JSON.parse(res.getContentText());
-  const aba = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CartoesFinalizados");
-  
-  // Limpa a aba e coloca os dados novos
-  aba.getRange(2, 1, aba.getLastRow(), aba.getLastColumn()).clearContent();
-  
-  dados.forEach((linha, i) => {
-    aba.appendRow([
-      linha.data_hora, 
-      linha.veiculo, 
-      linha.cartao, 
-      linha.operador, 
-      linha.rondante, 
-      linha.score, 
-      linha.status_pontos
-    ]);
-  });
-}
+
 
 </script>
 
 
 </body>
 </html>
+
